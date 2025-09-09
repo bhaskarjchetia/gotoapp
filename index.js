@@ -95,7 +95,7 @@ app.get('/oauth/callback', async (req, res) => {
     const redirectUri = process.env.GOTO_REDIRECT_URI;
 
     try {
-        const tokenResponse = await axios.post('https://api.goto.com/oauth/v2/token', 
+        const tokenResponse = await axios.post('https://authentication.logmeininc.com/oauth/token', 
             `grant_type=authorization_code&code=${code}&redirect_uri=${redirectUri}`, 
             {
                 headers: {
