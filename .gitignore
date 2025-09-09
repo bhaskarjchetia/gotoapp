@@ -1,0 +1,31 @@
+# Logs
+logs.json
+
+# Data
+data.json
+
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# npm-debug.log*
+.npm/
+.npm-debug.log
+.npm-debug.log.*
+
+# IDEs and editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Build artifacts
+build/
+dist/
+
+# OS generated files
+.DS_Store
+.Trashes
+Thumbs.db

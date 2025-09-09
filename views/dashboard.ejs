@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Dashboard</h1>
+        </header>
+        <main>
+            <section>
+                <div class="dashboard-header">
+                    <h2>Connected GoTo Accounts</h2>
+                    <div class="dashboard-actions">
+                        <a href="/oauth/authorize" class="btn btn-primary">Add New Account</a>
+                        <a href="/logout" class="btn btn-secondary">Logout</a>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Account Name</th>
+                                <th>Email</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (accounts.length === 0) { %>
+                                <tr>
+                                    <td colspan="3">No accounts connected yet.</td>
+
+                                </tr>
+                            <% } else { %>
+                                <% accounts.forEach(account => { %>
+                                <tr>
+                                      <td><%= account.name %></td>
+                                      <td><%= account.userEmail %></td>
+                                      <td>
+                                        <a href="/recordings/<%= account.id %>" class="btn btn-primary btn-sm">View Recordings</a>
+                                      </td>
+                                  </tr>
+                                <% }); %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

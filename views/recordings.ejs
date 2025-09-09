@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recordings and Transcriptions</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Recordings and Transcriptions</h1>
+        </header>
+        <main>
+            <section>
+                <div class="dashboard-header">
+                    <h2>Recordings for Account: <%= accountId %></h2>
+                    <div class="dashboard-actions">
+                        <a href="/dashboard" class="btn btn-primary">Back to Dashboard</a>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Recording ID</th>
+                                <th>Transcription Enabled</th>
+                                <th>Start Timestamp</th>
+                                <th>Transcript Content</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (recordings.length === 0) { %>
+                                <tr>
+                                    <td colspan="4">No recordings found for this account.</td>
+                                </tr>
+                            <% } else { %>
+                                <% recordings.forEach(recording => {
+                                %>
+                                <tr>
+                                    <td><%= recording.recording_id %></td>
+                                    <td><%= recording.transcription_enabled ? 'Yes' : 'No' %></td>
+                                    <td><%= recording.start_timestamp %></td>
+                                    <td><%= recording.transcript_content %></td>
+                                    <td class="recordings-table-actions">
+                                        <% if (!recording.content_url) { %>
+                                        <button onclick="fetchRecordingContent('<%= accountId %>', '<%= recording.recording_id %>')">Fetch Recording Content</button>
+                                        <% } else { %>
+                                            <a href="<%= recording.content_url %>" target="_blank">Listen Recording</a>
+                                        <% } %>
+
+                                        <% if (recording.transcription_enabled && !recording.transcript_content) { %>
+                                            <button onclick="fetchTranscriptionContent('<%= accountId %>', '<%= recording.recording_id %>')">Fetch Transcription Content</button>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                                <% }); %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="button-group" style="margin-top: 20px;">
+                    <a href="/dashboard"><button>Back to Dashboard</button></a>
+                    <button onclick="fetchRecordings('<%= accountId %>')">Fetch Recordings</button>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script>
+        async function fetchRecordings(accountId) {
+            try {
+                const response = await fetch(`/fetch-recordings/${accountId}`);
+                if (response.ok) {
+                    alert('Recordings fetched successfully! Please refresh the page.');
+                    window.location.reload();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Failed to fetch recordings: ${errorData.message}`);
+                }
+            } catch (error) {
+                console.error('Error fetching recordings:', error);
+                alert('An error occurred while fetching recordings.');
+            }
+        }
+
+        async function fetchRecordingContent(accountId, recordingId) {
+            try {
+                const response = await fetch(`/recording/${accountId}/${recordingId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('Recording content fetched successfully! Check console for details.');
+                    console.log('Recording Content:', data);
+                    // You can add logic here to display the recording content, e.g., play it in an audio/video player
+                } else {
+                    const errorData = await response.json();
+                    alert(`Failed to fetch recording content: ${errorData.message}`);
+                }
+            } catch (error) {
+                console.error('Error fetching recording content:', error);
+                alert('An error occurred while fetching recording content.');
+            }
+        }
+
+        async function fetchTranscriptionContent(accountId, recordingId) {
+            try {
+                const response = await fetch(`/transcript/${accountId}/${recordingId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('Transcription content fetched successfully! Check console for details.');
+                    console.log('Transcription Content:', data);
+                    // You can add logic here to display the transcription content
+                } else {
+                    const errorData = await response.json();
+                    alert(`Failed to fetch transcription content: ${errorData.message}`);
+                }
+            } catch (error) {
+                console.error('Error fetching transcription content:', error);
+                alert('An error occurred while fetching transcription content.');
+            }
+        }
+    </script>
+</body>
+</html>

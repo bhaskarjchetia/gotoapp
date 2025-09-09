@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+        <h2>data.json Content</h2>
+        <pre><%= JSON.stringify(dataContent, null, 2) %></pre>
+
+        <h2>logs.json Content</h2>
+        <pre><%= JSON.stringify(logsContent, null, 2) %></pre>
+
+        <div class="button-group">
+
+            <form action="/admin/clear-logs" method="POST">
+                <button type="submit" class="btn btn-secondary">Clear Logs</button>
+            </form>
+            
+
+            <a href="/admin/logout" class="btn btn-primary">Logout</a>
+        </div>
+    </div>
+</body>
+</html>
