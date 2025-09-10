@@ -1,6 +1,6 @@
 const express = require('express');
 const fs = require('fs');
-const { readData, writeData } = require('./utils/dataHandler');
+const { readData, writeData, readUsers, writeUsers } = require('./utils/dataHandler');
 const { clearLogs } = require('./utils/logHandler');
 const axios = require('axios');
 const { readLogs, writeLogs } = require('./utils/logHandler');
@@ -403,13 +403,14 @@ app.get('/transcript/:accountId/:id', async (req, res) => {
 // Login route
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
+    const users = readUsers();
+    const user = users.find(u => u.email === email && u.password === password);
 
-    // Simple hardcoded authentication for demonstration
-    if (email === 'admin@excellenc3.com' && password === 'e3admin2k25') {
+    if (user) {
         req.session.isUser = true;
         res.redirect('/dashboard'); // Redirect to dashboard on successful login
     } else {
-        res.send('Invalid credentials'); // Show error for failed login
+        res.render('login', { message: 'Invalid credentials' }); // Show error for failed login
     }
 });
 
@@ -468,6 +469,68 @@ function isAuthenticatedAdmin(req, res, next) {
 app.post('/admin/clear-logs', (req, res) => {
     clearLogs();
     res.redirect('/admin/dashboard');
+});
+
+// Admin User Management Routes
+app.get('/admin/users', isAuthenticatedAdmin, (req, res) => {
+    const users = readUsers();
+    res.render('adminUsers', { users });
+});
+
+// Admin Add User Route
+app.get('/admin/users/add', isAuthenticatedAdmin, (req, res) => {
+    res.render('adminAddUser', { message: null });
+});
+
+app.post('/admin/users/add', isAuthenticatedAdmin, (req, res) => {
+    const { email, password } = req.body;
+    const users = readUsers();
+    if (users.find(u => u.email === email)) {
+        return res.render('adminAddUser', { message: 'User with this email already exists.' });
+    }
+    users.push({ email, password });
+    writeUsers(users);
+    res.redirect('/admin/users');
+});
+
+// Admin Edit User Route
+app.get('/admin/users/edit/:email', isAuthenticatedAdmin, (req, res) => {
+    const userEmail = req.params.email;
+    const users = readUsers();
+    const user = users.find(u => u.email === userEmail);
+    if (!user) {
+        return res.redirect('/admin/users');
+    }
+    res.render('adminEditUser', { user, message: null });
+});
+
+app.post('/admin/users/edit/:email', isAuthenticatedAdmin, (req, res) => {
+    const oldEmail = req.params.email;
+    const { email, password } = req.body;
+    let users = readUsers();
+    const userIndex = users.findIndex(u => u.email === oldEmail);
+
+    if (userIndex === -1) {
+        return res.redirect('/admin/users');
+    }
+
+    // Check if new email already exists for another user
+    if (email !== oldEmail && users.find(u => u.email === email)) {
+        return res.render('adminEditUser', { user: { email: oldEmail, password: users[userIndex].password }, message: 'User with this new email already exists.' });
+    }
+
+    users[userIndex] = { email, password };
+    writeUsers(users);
+    res.redirect('/admin/users');
+});
+
+// Admin Delete User Route
+app.post('/admin/users/delete/:email', isAuthenticatedAdmin, (req, res) => {
+    const userEmail = req.params.email;
+    let users = readUsers();
+    users = users.filter(u => u.email !== userEmail);
+    writeUsers(users);
+    res.redirect('/admin/users');
 });
 
 // Admin Dashboard Route

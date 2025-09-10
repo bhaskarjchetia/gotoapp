@@ -23,5 +23,10 @@
             </form>
         </div>
     </div>
+    <% if (typeof message !== 'undefined' && message) { %>
+        <script>
+            alert('<%= message %>');
+        </script>
+    <% } %>
 </body>
 </html>

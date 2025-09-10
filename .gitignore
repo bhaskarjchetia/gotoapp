@@ -3,6 +3,7 @@ logs.json
 
 # Data
 data.json
+user.json
 
 # Dependencies
 node_modules/
