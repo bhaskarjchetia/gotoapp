@@ -364,8 +364,23 @@ app.get('/fetch-recordings/:accountId', async (req, res) => {
 app.get('/recordings/:accountId', (req, res) => {
     const accountId = req.params.accountId;
     const data = readData();
-    const accountRecordings = data.recordings?.[accountId] || [];
-    res.render('recordings', { accountId: accountId, recordings: accountRecordings });
+    const allAccountRecordings = data.recordings?.[accountId] || [];
+
+    const pageSize = 20;
+    const page = parseInt(req.query.page) || 1;
+    const totalRecordings = allAccountRecordings.length;
+    const totalPages = Math.ceil(totalRecordings / pageSize);
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalRecordings);
+
+    const recordingsForPage = allAccountRecordings.slice(startIndex, endIndex);
+
+    res.render('recordings', {
+        accountId: accountId,
+        recordings: recordingsForPage,
+        currentPage: page,
+        totalPages: totalPages
+    });
 });
 
 
