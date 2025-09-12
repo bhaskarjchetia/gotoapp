@@ -351,12 +351,12 @@ app.get('/fetch-recordings/:accountId', async (req, res) => {
         writeData(data);
 
         // After fetching all recording IDs, initiate downloads for new recordings
-        if (accessToken) {
-            const newRecordingsToDownload = data.recordings[accountId].filter(rec => !rec.recording_downloaded);
-            for (const recording of newRecordingsToDownload) {
-                downloadRecordingContent(accountId, recording.recording_id, accessToken);
-            }
-        }
+        // if (accessToken) {
+        //     const newRecordingsToDownload = data.recordings[accountId].filter(rec => !rec.recording_downloaded);
+        //     for (const recording of newRecordingsToDownload) {
+        //         downloadRecordingContent(accountId, recording.recording_id, accessToken);
+        //     }
+        // }
 
         logApiCall(`/fetch-recordings/${accountId}`, 'GET', { message: 'Recordings fetched and stored successfully.', count: finalCallEvents.length });
         res.status(200).json({ message: 'Recordings fetched and stored successfully.' });
