@@ -254,12 +254,12 @@ app.get('/fetch-recordings/:accountId', async (req, res) => {
         let allCallEvents = [];
         let pageMarker = req.query.pageMarker || null;
         
-        // Calculate default startTime (3 months ago) and endTime (current time)
+        // Calculate default startTime (30 days ago) and endTime (current time)
         const now = new Date();
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(now.getMonth() - 3);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(now.getDate() - 30);
 
-        const defaultStartTime = threeMonthsAgo.toISOString().slice(0, -5) + 'Z';
+        const defaultStartTime = thirtyDaysAgo.toISOString().slice(0, -5) + 'Z';
         const defaultEndTime = now.toISOString().slice(0, -5) + 'Z';
 
         let startTime = req.query.startTime || account.latest_callCreated_timestamp || defaultStartTime;
