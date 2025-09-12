@@ -393,7 +393,7 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
             }
         });
 
-        const token = tokenResponse.data.token;
+        const token = tokenResponse.data.token.token;
 
         // Step 3: Fetch the recording content using the token
         const recordingContentResponse = await axios.get(`https://api.goto.com/recording/v1/recordings/${recordingId}/content/${token}`, {
@@ -433,7 +433,8 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
             }
         });
 
-        const token = tokenResponse.data.token;
+        const token = tokenResponse.data.token.token;
+        console.log(`Recording content token for ${recordingId}:`, token);
 
         // Step 2: Fetch the recording content using the token
         const recordingContentResponse = await axios.get(`https://api.goto.com/recording/v1/recordings/${recordingId}/content/${token}`, {
@@ -442,6 +443,8 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
             },
             responseType: 'arraybuffer' // Important for binary data
         });
+        console.log(`Recording content response status for ${recordingId}:`, recordingContentResponse.status);
+        console.log(`Recording content data length for ${recordingId}:`, recordingContentResponse.data ? recordingContentResponse.data.length : 'No data');
 
         const recordingFilePath = `/recordings/${recordingId}.mp3`; // Store relative path
         fs.writeFileSync(`public${recordingFilePath}`, recordingContentResponse.data);
