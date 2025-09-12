@@ -451,13 +451,19 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
 // New endpoint to trigger download of all pending recordings for an account
 app.post('/download-all-pending-recordings/:accountId', async (req, res) => {
     const { accountId } = req.params;
-    const accessToken = req.session.accessToken; // Assuming accessToken is stored in session
 
-    if (!accessToken) {
-        return res.status(401).json({ message: 'Unauthorized: No access token found.' });
+    const data = readData();
+    const account = data.accounts.find(acc => acc.id === accountId);
+    if (!account) {
+        return res.status(404).json({ message: 'Account not found.' });
     }
 
     try {
+        const accessToken = await refreshAccessToken(account);
+        if (!accessToken) {
+            return res.status(401).json({ message: 'Failed to refresh access token.' });
+        }
+        
         const allData = readData();
         const accountRecordings = allData.recordings[accountId] || [];
         const pendingRecordings = accountRecordings.filter(rec => !rec.recording_downloaded);
