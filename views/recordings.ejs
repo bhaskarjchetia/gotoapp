@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recordings and Transcriptions</title>
+    <title>Recordings</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Recordings and Transcriptions</h1>
+            <h1>Recordings</h1>
         </header>
         <main>
             <section>
@@ -24,7 +24,6 @@
                         <thead>
                             <tr>
                                 <th>Recording ID</th>
-                                <th>Transcription Enabled</th>
                                 <th>Start Timestamp</th>
                                 <th>Actions</th>
                             </tr>
@@ -32,14 +31,13 @@
                         <tbody>
                             <% if (recordings.length === 0) { %>
                                 <tr>
-                                    <td colspan="4">No recordings found for this account.</td>
+                                    <td colspan="3">No recordings found for this account.</td>
                                 </tr>
                             <% } else { %>
                                 <% recordings.forEach(recording => {
                                 %>
                                 <tr>
                                     <td><%= recording.recording_id %></td>
-                                    <td><%= recording.transcription_enabled ? 'Yes' : 'No' %></td>
                                     <td><%= recording.start_timestamp %></td>
                                     <td class="recordings-table-actions">
                                         <% if (!recording.content_url) { %>
@@ -52,10 +50,6 @@
                                         <% } else { %>
                                             <a href="<%= recording.content_url %>" target="_blank">Listen Recording</a>
                                         <% } %>
-
-                                        <% if (recording.transcription_enabled && !recording.transcript_content) { %>
-                                            <button onclick="fetchTranscriptionContent('<%= accountId %>', '<%= recording.recording_id %>')">Fetch Transcription Content</button>
-                                        <% } %>
                                     </td>
                                 </tr>
                                 <% }); %>
@@ -67,30 +61,54 @@
                     <a href="/dashboard"><button>Back to Dashboard</button></a>
                     <button onclick="fetchRecordings('<%= accountId %>')">Fetch Recordings</button>
                 </div>
-                <div id="loader" style="display: none; margin-top: 20px;">
-                    Loading recordings... <img src="/images/spinner.gif" alt="Loading" style="width: 20px; height: 20px;">
-                </div>
             </section>
+
+            <div id="loader" style="display: none;">
+                <img src="/public/images/spinner.svg" alt="Loading...">
+                <p>Loading...</p>
+            </div>
         </main>
-    </div>
+      </div>
+
+      <script>
+        function showLoader() {
+            document.getElementById('loader').style.display = 'flex';
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        // Show loader when the page starts loading
+        document.addEventListener('DOMContentLoaded', showLoader);
+
+        // Hide loader when the page finishes loading
+        window.addEventListener('load', hideLoader);
+
+        // Example of how you might use it for AJAX calls or other dynamic content loading
+        // For instance, if you have a button that triggers data loading:
+        // document.getElementById('myButton').addEventListener('click', function() {
+        //     showLoader();
+        //     // Simulate data loading
+        //     setTimeout(hideLoader, 2000);
+        // });
+      </script>
     <script>
         async function fetchRecordings(accountId) {
-            const loader = document.getElementById('loader');
-            loader.style.display = 'block'; // Show loader
+            showLoader(); // Show loader when fetch starts
             try {
                 const response = await fetch(`/fetch-recordings/${accountId}`);
-                if (response.ok) {
-                    alert('Recordings fetched successfully! Please refresh the page.');
-                    window.location.reload();
-                } else {
+                if (!response.ok) {
                     const errorData = await response.json();
-                    alert(`Failed to fetch recordings: ${errorData.message}`);
+                    throw new Error(errorData.message || 'Failed to fetch recordings');
                 }
+                alert('Recordings fetched successfully! Please refresh the page.');
+                window.location.reload(); // Reload to display new recordings
             } catch (error) {
                 console.error('Error fetching recordings:', error);
-                alert('An error occurred while fetching recordings.');
+                alert(`An error occurred while fetching recordings: ${error.message}`);
             } finally {
-                loader.style.display = 'none'; // Hide loader
+                hideLoader(); // Hide loader when fetch completes (success or error)
             }
         }
 
