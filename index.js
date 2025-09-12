@@ -10,6 +10,13 @@ require('dotenv').config();
 const app = express();
 const bodyParser = require('body-parser');
 const session = require('express-session');
+const path = require('path');
+
+// Ensure the recordings directory exists
+const recordingsDir = path.join(__dirname, 'public', 'recordings');
+if (!fs.existsSync(recordingsDir)) {
+    fs.mkdirSync(recordingsDir, { recursive: true });
+}
 
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
