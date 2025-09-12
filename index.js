@@ -296,7 +296,7 @@ app.get('/fetch-recordings/:accountId', async (req, res) => {
         if (finalCallEvents.length > 0) {
             const mostRecentCallCreated = finalCallEvents.reduce((maxDate, event) => {
                 return (new Date(event.callCreated) > new Date(maxDate)) ? event.callCreated : maxDate;
-            }, latestCallCreated || "1970-01-01T00:00:00Z"); // Default to epoch if no previous timestamp
+            }, account.latest_callCreated_timestamp || "1970-01-01T00:00:00Z"); // Default to epoch if no previous timestamp
             account.latest_callCreated_timestamp = mostRecentCallCreated;
             writeData(data); // Persist the updated account data
         }
