@@ -122,7 +122,12 @@ async function testDownloadFirstFiveRecordings() {
 
         if (recordingsToDownload.length === 0) {
             console.log(`No new recordings found for account ${account.id}. Attempting to fetch new recording IDs.`);
-            await fetchRecordingIds(account.id, accessToken);
+            if (accessToken) { // Add this check
+                await fetchRecordingIds(account.id, accessToken);
+            } else {
+                console.error(`Cannot fetch new recording IDs for account ${account.id} because access token is invalid.`);
+                continue; // Skip to the next account if token is invalid
+            }
             // Re-read data after fetching new IDs
             const updatedData = readData();
             accountRecordings = updatedData.recordings[account.id] || {};

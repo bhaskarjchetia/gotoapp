@@ -334,7 +334,6 @@ app.get('/fetch-recordings/:accountId', async (req, res) => {
         writeData(data);
 
         // After fetching all recording IDs, initiate downloads for new recordings
-        const accessToken = await refreshAccessToken(account);
         if (accessToken) {
             const newRecordingsToDownload = data.recordings[accountId].filter(rec => !rec.recording_downloaded);
             for (const recording of newRecordingsToDownload) {
