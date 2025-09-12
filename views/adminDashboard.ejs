@@ -12,27 +12,198 @@
             border-radius: 5px;
             overflow-x: auto;
         }
-        
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .tab-buttons button {
+            margin-right: 10px;
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .user-table th, .user-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .user-table th {
+            background-color: #f2f2f2;
+        }
+        .user-form {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .user-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .user-form input[type="email"],
+        .user-form input[type="password"],
+        .user-form input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .user-form button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .user-form button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Admin Dashboard</h1>
-        <h2>data.json Content</h2>
-        <pre><%= JSON.stringify(dataContent, null, 2) %></pre>
 
-        <h2>logs.json Content</h2>
-        <pre><%= JSON.stringify(logsContent, null, 2) %></pre>
+        <div class="tab-buttons">
+            <button onclick="showTab('dashboard')" class="<%= activeTab === 'dashboard' ? 'active' : '' %>">Dashboard</button>
+            <button onclick="showTab('users')" class="<%= activeTab === 'users' ? 'active' : '' %>">User Management</button>
+        </div>
 
-        <div class="button-group">
+        <div id="dashboard" class="tab-content <%= activeTab === 'dashboard' ? 'active' : '' %>">
+            <h2>data.json Content</h2>
+            <pre><%= JSON.stringify(dataContent, null, 2) %></pre>
 
-            <form action="/admin/clear-logs" method="POST">
-                <button type="submit" class="btn btn-secondary">Clear Logs</button>
+            <h2>logs.json Content</h2>
+            <pre><%= JSON.stringify(logsContent, null, 2) %></pre>
+
+            <div class="button-group">
+                <form action="/admin/clear-logs" method="POST">
+                    <button type="submit" class="btn btn-secondary">Clear Logs</button>
+                </form>
+                <a href="/admin/logout" class="btn btn-primary">Logout</a>
+            </div>
+        </div>
+
+        <div id="users" class="tab-content <%= activeTab === 'users' ? 'active' : '' %>">
+            <h2>User Management</h2>
+
+            <h3>Add New User</h3>
+            <form action="/admin/users/add" method="POST" class="user-form">
+                <label for="addEmail">Email:</label>
+                <input type="email" id="addEmail" name="email" required>
+                <label for="addPassword">Password:</label>
+                <input type="password" id="addPassword" name="password" required>
+                <button type="submit">Add User</button>
             </form>
-            <a href="/admin/users" class="btn btn-primary">Manage Users</a>
 
-            <a href="/admin/logout" class="btn btn-primary">Logout</a>
+            <h3>Existing Users</h3>
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Email</th>
+                        <th>Password</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% users.users.forEach(user => { %>
+                        <tr>
+                            <td><%= user.id %></td>
+                            <td><%= user.email %></td>
+                            <td><%= user.password %></td>
+                            <td>
+                                <button type="button" class="btn btn-sm edit-button" onclick="toggleEdit('<%= user.id %>')">Edit</button>
+                                <form action="/admin/users/update" method="POST" style="display:inline-block;" id="updateForm<%= user.id %>" class="update-form">
+                                    <input type="hidden" name="id" value="<%= user.id %>">
+                                    <div class="edit-controls" style="display: none;">
+                                        <input type="email" name="email" value="<%= user.email %>" required style="width: 100px;">
+                                        <input type="password" name="password" value="<%= user.password %>" required style="width: 100px;">
+                                        <button type="submit" class="btn btn-sm">Update</button>
+                                    </div>
+                                </form>
+                                <form action="/admin/users/delete" method="POST" style="display:inline-block;">
+                                    <input type="hidden" name="id" value="<%= user.id %>">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
         </div>
     </div>
+
+    <script>
+        function showTab(tabId) {
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+
+            const buttons = document.querySelectorAll('.tab-buttons button');
+            buttons.forEach(button => {
+                button.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+
+        function toggleEdit(userId) {
+            const editButton = document.querySelector(`button[onclick="toggleEdit('${userId}')"]`);
+            const editControls = document.querySelector(`#updateForm${userId} .edit-controls`);
+
+            if (editControls.style.display === 'none' || editControls.style.display === '') {
+                editControls.style.display = 'inline-block';
+                editButton.style.display = 'none'; // Hide edit button
+            } else {
+                editControls.style.display = 'none';
+                editButton.style.display = 'inline-block'; // Show edit button
+            }
+        }
+
+        // Set initial active tab based on server-side rendering
+        document.addEventListener('DOMContentLoaded', () => {
+            const initialTab = '<%= activeTab %>';
+            if (initialTab) {
+                showTab(initialTab);
+            } else {
+                showTab('dashboard'); // Default to dashboard if no activeTab is provided
+            }
+            // Hide all edit controls initially
+            document.querySelectorAll('.edit-controls').forEach(controls => {
+                controls.style.display = 'none';
+            });
+
+            // Handle update form submission
+            document.querySelectorAll('.update-form').forEach(form => {
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const formData = new FormData(form);
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: new URLSearchParams(formData)
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert(result.message);
+                        location.reload();
+                    } else {
+                        alert(result.message);
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

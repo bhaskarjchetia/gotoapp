@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 
 const DATA_FILE = path.join(__dirname, '..', 'data.json');
-const USER_FILE = path.join(__dirname, '..', 'user.json');
 
 function readData() {
     try {
@@ -22,22 +21,51 @@ function writeData(data) {
     }
 }
 
-function readUsers() {
-    try {
-        const users = fs.readFileSync(USER_FILE, 'utf8');
-        return JSON.parse(users);
-    } catch (error) {
-        console.error('Error reading user file:', error);
-        return []; // Return an empty array if file doesn't exist or is empty
+function addAccount(account) {
+    const data = readData();
+    data.accounts.push(account);
+    writeData(data);
+}
+
+function updateAccount(updatedAccount) {
+    const data = readData();
+    const index = data.accounts.findIndex(acc => acc.id === updatedAccount.id);
+    if (index !== -1) {
+        data.accounts[index] = updatedAccount;
+        writeData(data);
     }
 }
 
-function writeUsers(users) {
-    try {
-        fs.writeFileSync(USER_FILE, JSON.stringify(users, null, 4), 'utf8');
-    } catch (error) {
-        console.error('Error writing user file:', error);
-    }
+function deleteAccount(accountId) {
+    const data = readData();
+    data.accounts = data.accounts.filter(acc => acc.id !== accountId);
+    writeData(data);
 }
 
-module.exports = { readData, writeData, readUsers, writeUsers };
+function findAccountById(accountId) {
+    const data = readData();
+    return data.accounts.find(acc => acc.id === accountId);
+}
+
+function addRecordings(newRecordings) {
+    const data = readData();
+    data.recordings.push(...newRecordings);
+    writeData(data);
+}
+
+function addTranscriptions(newTranscriptions) {
+    const data = readData();
+    data.transcriptions.push(...newTranscriptions);
+    writeData(data);
+}
+
+module.exports = {
+    readData,
+    writeData,
+    addAccount,
+    updateAccount,
+    deleteAccount,
+    findAccountById,
+    addRecordings,
+    addTranscriptions
+};

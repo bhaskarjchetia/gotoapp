@@ -1,7 +1,8 @@
 const express = require('express');
 const fs = require('fs');
-const { readData, writeData, readUsers, writeUsers } = require('./utils/dataHandler');
+const { readData, writeData, deleteAccount } = require('./utils/dataHandler');
 const { clearLogs } = require('./utils/logHandler');
+const { readUsers, writeUsers, addUser, findUser, updateUser, deleteUser } = require('./utils/userHandler');
 const axios = require('axios');
 const { readLogs, writeLogs } = require('./utils/logHandler');
 require('dotenv').config();
@@ -403,18 +404,28 @@ app.get('/transcript/:accountId/:id', async (req, res) => {
 // Login route
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
-    const users = readUsers();
-    const user = users.find(u => u.email === email && u.password === password);
+    const user = findUser(email, password);
 
     if (user) {
         req.session.isUser = true;
-        res.redirect('/dashboard'); // Redirect to dashboard on successful login
+        req.session.userId = user.id; // Store user ID in session
+        res.json({ success: true, redirect: '/dashboard' });
     } else {
-        res.render('login', { message: 'Invalid credentials' }); // Show error for failed login
+        res.json({ success: false, message: 'Invalid credentials' });
     }
 });
 
 
+
+app.post('/disconnect-account', (req, res) => {
+    const { accountId } = req.body;
+    if (accountId) {
+        deleteAccount(accountId);
+        res.json({ success: true, message: 'Account disconnected successfully.' });
+    } else {
+        res.status(400).json({ success: false, message: 'Account ID is required.' });
+    }
+});
 
 app.get('/logout', (req, res) => {
     req.session.destroy(() => {
@@ -474,62 +485,24 @@ app.post('/admin/clear-logs', (req, res) => {
 // Admin User Management Routes
 app.get('/admin/users', isAuthenticatedAdmin, (req, res) => {
     const users = readUsers();
-    res.render('adminUsers', { users });
-});
-
-// Admin Add User Route
-app.get('/admin/users/add', isAuthenticatedAdmin, (req, res) => {
-    res.render('adminAddUser', { message: null });
+    res.render('adminDashboard', { dataContent: readData(), logsContent: readLogs(), users: users, activeTab: 'users' });
 });
 
 app.post('/admin/users/add', isAuthenticatedAdmin, (req, res) => {
     const { email, password } = req.body;
-    const users = readUsers();
-    if (users.find(u => u.email === email)) {
-        return res.render('adminAddUser', { message: 'User with this email already exists.' });
-    }
-    users.push({ email, password });
-    writeUsers(users);
+    addUser(email, password);
     res.redirect('/admin/users');
 });
 
-// Admin Edit User Route
-app.get('/admin/users/edit/:email', isAuthenticatedAdmin, (req, res) => {
-    const userEmail = req.params.email;
-    const users = readUsers();
-    const user = users.find(u => u.email === userEmail);
-    if (!user) {
-        return res.redirect('/admin/users');
-    }
-    res.render('adminEditUser', { user, message: null });
+app.post('/admin/users/update', isAuthenticatedAdmin, (req, res) => {
+    const { id, email, password } = req.body;
+    updateUser(id, email, password);
+    res.json({ success: true, message: 'User updated successfully!' });
 });
 
-app.post('/admin/users/edit/:email', isAuthenticatedAdmin, (req, res) => {
-    const oldEmail = req.params.email;
-    const { email, password } = req.body;
-    let users = readUsers();
-    const userIndex = users.findIndex(u => u.email === oldEmail);
-
-    if (userIndex === -1) {
-        return res.redirect('/admin/users');
-    }
-
-    // Check if new email already exists for another user
-    if (email !== oldEmail && users.find(u => u.email === email)) {
-        return res.render('adminEditUser', { user: { email: oldEmail, password: users[userIndex].password }, message: 'User with this new email already exists.' });
-    }
-
-    users[userIndex] = { email, password };
-    writeUsers(users);
-    res.redirect('/admin/users');
-});
-
-// Admin Delete User Route
-app.post('/admin/users/delete/:email', isAuthenticatedAdmin, (req, res) => {
-    const userEmail = req.params.email;
-    let users = readUsers();
-    users = users.filter(u => u.email !== userEmail);
-    writeUsers(users);
+app.post('/admin/users/delete', isAuthenticatedAdmin, (req, res) => {
+    const { id } = req.body;
+    deleteUser(id);
     res.redirect('/admin/users');
 });
 
@@ -537,7 +510,8 @@ app.post('/admin/users/delete/:email', isAuthenticatedAdmin, (req, res) => {
 app.get('/admin/dashboard', isAuthenticatedAdmin, (req, res) => {
     const dataContent = readData();
     const logsContent = readLogs();
-    res.render('adminDashboard', { dataContent, logsContent });
+    const users = readUsers(); // Fetch users for the dashboard
+    res.render('adminDashboard', { dataContent, logsContent, users, activeTab: 'dashboard' });
 });
 
 // Admin Logout Route

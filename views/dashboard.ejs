@@ -42,6 +42,7 @@
                                       <td><%= account.userEmail %></td>
                                       <td>
                                         <a href="/recordings/<%= account.id %>" class="btn btn-primary btn-sm">View Recordings</a>
+                                        <button class="btn btn-danger btn-sm disconnect-btn" data-account-id="<%= account.id %>">Disconnect</button>
                                       </td>
                                   </tr>
                                 <% }); %>
@@ -52,5 +53,33 @@
             </section>
         </main>
     </div>
+    <script>
+        document.querySelectorAll('.disconnect-btn').forEach(button => {
+            button.addEventListener('click', async (event) => {
+                const accountId = event.target.dataset.accountId;
+                if (confirm('Are you sure you want to disconnect this account?')) {
+                    try {
+                        const response = await fetch('/disconnect-account', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ accountId })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            alert(data.message);
+                            window.location.reload();
+                        } else {
+                            alert(data.message);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('An error occurred while disconnecting the account.');
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>
