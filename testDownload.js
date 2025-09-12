@@ -67,6 +67,39 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
     }
 }
 
+async function fetchRecordingIds(accountId, accessToken) {
+    try {
+        const response = await axios.get(`https://api.goto.com/recording/v1/accounts/${accountId}/recordings`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const allData = readData();
+        if (!allData.recordings) {
+            allData.recordings = {};
+        }
+        if (!allData.recordings[accountId]) {
+            allData.recordings[accountId] = {};
+        }
+
+        response.data.forEach(recording => {
+            if (!allData.recordings[accountId][recording.recordingId]) {
+                allData.recordings[accountId][recording.recordingId] = {
+                    recording_id: recording.recordingId,
+                    content_url: null, // Initialize content_url
+                    local_file_path: null, // Initialize local_file_path
+                    recording_downloaded: false // Initialize as not downloaded
+                };
+            }
+        });
+        writeData(allData);
+        console.log(`Fetched and updated recording IDs for account ${accountId}.`);
+    } catch (error) {
+        console.error(`Error fetching recording IDs for account ${accountId}:`, error.response ? error.response.data : error.message);
+    }
+}
+
 async function testDownloadFirstFiveRecordings() {
     const data = readData();
     const accounts = data.accounts;
@@ -84,12 +117,21 @@ async function testDownloadFirstFiveRecordings() {
             continue;
         }
 
-        const accountRecordings = data.recordings[account.id] || [];
-        const recordingsToDownload = accountRecordings.filter(rec => !rec.recording_downloaded).slice(0, 5);
+        let accountRecordings = data.recordings[account.id] || {};
+        let recordingsToDownload = Object.values(accountRecordings).filter(rec => !rec.recording_downloaded).slice(0, 5);
 
         if (recordingsToDownload.length === 0) {
-            console.log(`No new recordings to download for account ${account.id}.`);
-            continue;
+            console.log(`No new recordings found for account ${account.id}. Attempting to fetch new recording IDs.`);
+            await fetchRecordingIds(account.id, accessToken);
+            // Re-read data after fetching new IDs
+            const updatedData = readData();
+            accountRecordings = updatedData.recordings[account.id] || {};
+            recordingsToDownload = Object.values(accountRecordings).filter(rec => !rec.recording_downloaded).slice(0, 5);
+
+            if (recordingsToDownload.length === 0) {
+                console.log(`Still no new recordings to download for account ${account.id} after fetching IDs.`);
+                continue;
+            }
         }
 
         console.log(`Attempting to download ${recordingsToDownload.length} new recordings for account ${account.id}...`);
