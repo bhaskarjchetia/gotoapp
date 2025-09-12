@@ -410,7 +410,6 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
         const allData = readData();
         if (allData.recordings[accountId] && allData.recordings[accountId][recordingId]) {
             allData.recordings[accountId][recordingId].content_url = recordingFilePath; // Store local file path
-            allData.recordings[accountId][recordingId].local_file_path = recordingFilePath; // Add local file path
             allData.recordings[accountId][recordingId].recording_downloaded = true; // Add flag
             writeData(allData);
         }
@@ -449,11 +448,13 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
 
         // Update data.json with the local file path and downloaded flag
         const allData = readData();
-        if (allData.recordings[accountId] && allData.recordings[accountId][recordingId]) {
-            allData.recordings[accountId][recordingId].content_url = recordingFilePath; // Store local file path
-            allData.recordings[accountId][recordingId].local_file_path = recordingFilePath; // Add local file path
-            allData.recordings[accountId][recordingId].recording_downloaded = true; // Add flag
-            writeData(allData);
+        if (allData.recordings[accountId]) {
+            const recordingIndex = allData.recordings[accountId].findIndex(r => r.recording_id === recordingId);
+            if (recordingIndex !== -1) {
+                allData.recordings[accountId][recordingIndex].content_url = recordingFilePath; // Store local file path
+                allData.recordings[accountId][recordingIndex].recording_downloaded = true; // Add flag
+                writeData(allData);
+            }
         }
         console.log(`Recording ${recordingId} downloaded and saved.`);
     } catch (error) {
