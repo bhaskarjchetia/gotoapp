@@ -178,7 +178,20 @@ app.get('/call-events/:accountId', async (req, res) => {
     }
 
     try {
-        const callEventsResponse = await axios.get(`https://api.goto.com/call-events/v1/conversation-spaces?accountKey=${accountId}`, {
+        let apiUrl = `https://api.goto.com/call-events-report/v1/report-summaries?accountKey=${accountId}`;
+
+        if (req.query.userKey) apiUrl += `&userKey=${req.query.userKey}`;
+        if (req.query.phoneNumberId) apiUrl += `&phoneNumberId=${req.query.phoneNumberId}`;
+        if (req.query.lineId) apiUrl += `&lineId=${req.query.lineId}`;
+        if (req.query.virtualParticipantId) apiUrl += `&virtualParticipantId=${req.query.virtualParticipantId}`;
+        if (req.query.startTime) apiUrl += `&startTime=${req.query.startTime}`;
+        if (req.query.endTime) apiUrl += `&endTime=${req.query.endTime}`;
+        if (req.query.conversationScope) apiUrl += `&conversationScope=${req.query.conversationScope}`;
+        if (req.query.conversationCallerOutcome) apiUrl += `&conversationCallerOutcome=${req.query.conversationCallerOutcome}`;
+        if (req.query.pageSize) apiUrl += `&pageSize=${req.query.pageSize}`;
+        if (req.query.pageMarker) apiUrl += `&pageMarker=${req.query.pageMarker}`;
+
+        const callEventsResponse = await axios.get(apiUrl, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
             }
@@ -189,28 +202,19 @@ app.get('/call-events/:accountId', async (req, res) => {
         const transcriptIds = [];
 
         callEvents.forEach(event => {
-            // Extract recordings from both state and participant levels
-            if (event.state?.recordings) {
-                event.state.recordings.forEach(recording => {
-                    recordingIds.push(recording.id);
-                    if (recording.transcriptEnabled) {
-                        transcriptIds.push(recording.id);
+            // Extract recordings from caller
+            if (event.caller?.recordingId) {
+                recordingIds.push(event.caller.recordingId);
+            }
+            
+            // Extract recordings from participants
+            if (event.participants) {
+                event.participants.forEach(participant => {
+                    if (participant.recordingId) {
+                        recordingIds.push(participant.recordingId);
                     }
                 });
             }
-            
-            // if (event.state?.participants) {
-            //     event.state.participants.forEach(participant => {
-            //         if (participant.recordings) {
-            //             participant.recordings.forEach(recording => {
-            //                 recordingIds.push(recording.id);
-            //                 if (recording.transcriptEnabled) {
-            //                     transcriptIds.push(recording.id);
-            //                 }
-            //             });
-            //         }
-            //     });
-            // }
         });
 
         logApiCall(`/call-events/${accountId}`, 'GET', { message: 'Call events fetched successfully', count: callEvents.length });
@@ -247,12 +251,45 @@ app.get('/fetch-recordings/:accountId', async (req, res) => {
     }
 
     try {
-        const callEventsResponse = await axios.get(`https://api.goto.com/call-events/v1/conversation-spaces?accountKey=${accountId}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
-        const callEvents = callEventsResponse.data.items;
+        let allCallEvents = [];
+        let pageMarker = req.query.pageMarker || null;
+        let latestCallCreated = account.latest_callCreated_timestamp || null;
+
+        do {
+            let apiUrl = `https://api.goto.com/call-events-report/v1/report-summaries?accountKey=${accountId}`;
+
+            if (req.query.userKey) apiUrl += `&userKey=${req.query.userKey}`;
+            if (req.query.phoneNumberId) apiUrl += `&phoneNumberId=${req.query.phoneNumberId}`;
+            if (req.query.lineId) apiUrl += `&lineId=${req.query.lineId}`;
+            if (req.query.virtualParticipantId) apiUrl += `&virtualParticipantId=${req.query.virtualParticipantId}`;
+            if (latestCallCreated) apiUrl += `&startTime=${latestCallCreated}`;
+            if (req.query.endTime) apiUrl += `&endTime=${req.query.endTime}`;
+            if (req.query.conversationScope) apiUrl += `&conversationScope=${req.query.conversationScope}`;
+            if (req.query.conversationCallerOutcome) apiUrl += `&conversationCallerOutcome=${req.query.conversationCallerOutcome}`;
+            apiUrl += `&pageSize=${req.query.pageSize || 100}`;
+            if (pageMarker) apiUrl += `&pageMarker=${pageMarker}`;
+
+            const callEventsResponse = await axios.get(apiUrl, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+            const callEvents = callEventsResponse.data.items;
+            allCallEvents = allCallEvents.concat(callEvents);
+            pageMarker = callEventsResponse.data.nextPageMarker || null;
+
+        } while (pageMarker);
+
+        const finalCallEvents = allCallEvents;
+
+        // Update latest_callCreated_timestamp for the account
+        if (finalCallEvents.length > 0) {
+            const mostRecentCallCreated = finalCallEvents.reduce((maxDate, event) => {
+                return (new Date(event.callCreated) > new Date(maxDate)) ? event.callCreated : maxDate;
+            }, latestCallCreated || "1970-01-01T00:00:00Z"); // Default to epoch if no previous timestamp
+            account.latest_callCreated_timestamp = mostRecentCallCreated;
+            writeData(data); // Persist the updated account data
+        }
 
         // Initialize recordings object if it doesn't exist
         if (!data.recordings) {
@@ -263,41 +300,49 @@ app.get('/fetch-recordings/:accountId', async (req, res) => {
             data.recordings[accountId] = [];
         }
 
-        callEvents.forEach(event => {
-            // Extract recordings from both state and participant levels
-            if (event.state?.recordings) {
-                event.state.recordings.forEach(recording => {
-                    const existingRecording = data.recordings[accountId].find(r => r.recording_id === recording.id);
-                    if (!existingRecording) {
-                        data.recordings[accountId].push({
-                            recording_id: recording.id,
-                            transcription_enabled: recording.transcriptEnabled || false,
-                            start_timestamp: new Date(event.startTime).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-')
-                        });
+        finalCallEvents.forEach(event => {
+            // Extract recordings from caller
+            if (event.caller?.recordingId) {
+                const recordingId = event.caller.recordingId;
+                const existingRecording = data.recordings[accountId].find(r => r.recording_id === recordingId);
+                if (!existingRecording) {
+                    data.recordings[accountId].push({
+                        recording_id: recordingId,
+                        start_timestamp: new Date(event.callCreated).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-'),
+                        recording_downloaded: false // Initialize as not downloaded
+                    });
+                }
+            }
+            
+            // Extract recordings from participants
+            if (event.participants) {
+                event.participants.forEach(participant => {
+                    if (participant.recordingId) {
+                        const recordingId = participant.recordingId;
+                        const existingRecording = data.recordings[accountId].find(r => r.recording_id === recordingId);
+                        if (!existingRecording) {
+                            data.recordings[accountId].push({
+                                recording_id: recordingId,
+                                start_timestamp: new Date(event.callCreated).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-'),
+                                recording_downloaded: false // Initialize as not downloaded
+                            });
+                        }
                     }
                 });
             }
-            
-            // if (event.state?.participants) {
-            //     event.state.participants.forEach(participant => {
-            //         if (participant.recordings) {
-            //             participant.recordings.forEach(recording => {
-            //                 const existingRecording = data.recordings[accountId].find(r => r.recording_id === recording.id);
-            //                 if (!existingRecording) {
-            //                     data.recordings[accountId].push({
-            //                         recording_id: recording.id,
-            //                         transcription_enabled: recording.transcriptEnabled || false,
-            //                         start_timestamp: new Date(event.startTime).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\//g, '-')
-            //                     });
-            //                 }
-            //             });
-            //         }
-            //     });
-            // }
         });
         writeData(data);
 
-        logApiCall(`/fetch-recordings/${accountId}`, 'GET', { message: 'Recordings fetched and stored successfully.', count: callEvents.length });
+        // After fetching all recording IDs, initiate downloads for new recordings
+        const accessToken = await refreshAccessToken(account);
+        if (accessToken) {
+            const newRecordingsToDownload = data.recordings[accountId].filter(rec => !rec.recording_downloaded);
+            for (const recording of newRecordingsToDownload) {
+                downloadRecordingContent(accountId, recording.recording_id, accessToken);
+            }
+        }
+
+        logApiCall(`/fetch-recordings/${accountId}`, 'GET', { message: 'Recordings fetched and stored successfully.', count: finalCallEvents.length });
         res.status(200).json({ message: 'Recordings fetched and stored successfully.' });
 
     } catch (error) {
@@ -315,10 +360,9 @@ app.get('/recordings/:accountId', (req, res) => {
 });
 
 
-// Route to fetch a specific recording content
-app.get('/recording/:accountId/:id', async (req, res) => {
-    const accountId = req.params.accountId;
-    const recordingId = req.params.id;
+// Route to fetch a single recording's content and save it locally
+app.get('/recording/:accountId/:recordingId', async (req, res) => {
+    const { accountId, recordingId } = req.params;
     const data = readData();
     const account = data.accounts.find(acc => acc.id === accountId);
 
@@ -326,13 +370,55 @@ app.get('/recording/:accountId/:id', async (req, res) => {
         return res.status(404).json({ message: 'Account not found.' });
     }
 
-    const accessToken = account.accessToken;
-    if (!accessToken) {
-        return res.status(401).json({ message: 'Access token is missing.' });
-    }
-
     try {
-        // Step 1: Get the token for the recording content
+        // Step 1: Get the access token
+        const accessToken = await refreshAccessToken(account);
+        if (!accessToken) {
+            return res.status(401).json({ message: 'Failed to refresh access token.' });
+        }
+
+        // Step 2: Get the recording content token
+        const tokenResponse = await axios.get(`https://api.goto.com/recording/v1/recordings/${recordingId}/content`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const token = tokenResponse.data.token;
+
+        // Step 3: Fetch the recording content using the token
+        const recordingContentResponse = await axios.get(`https://api.goto.com/recording/v1/recordings/${recordingId}/content/${token}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            },
+            responseType: 'arraybuffer' // Important for binary data
+        });
+
+        const recordingFilePath = `/recordings/${recordingId}.mp3`; // Store relative path
+        fs.writeFileSync(`public${recordingFilePath}`, recordingContentResponse.data);
+
+        // Update data.json with the local file path and downloaded flag
+        const allData = readData();
+        if (allData.recordings[accountId] && allData.recordings[accountId][recordingId]) {
+            allData.recordings[accountId][recordingId].content_url = recordingFilePath; // Store local file path
+            allData.recordings[accountId][recordingId].local_file_path = recordingFilePath; // Add local file path
+            allData.recordings[accountId][recordingId].recording_downloaded = true; // Add flag
+            writeData(allData);
+        }
+
+        logApiCall(`/recording/${accountId}/${recordingId}`, 'GET', { message: 'Recording content fetched and saved successfully', recordingId: recordingId });
+        res.status(200).json({ message: 'Recording content fetched and saved successfully.' });
+
+    } catch (error) {
+        console.error(`Error fetching recording content for ${recordingId}:`, error.response ? error.response.data : error.message);
+        res.status(500).json({ message: `Failed to fetch recording content for ${recordingId}.` });
+    }
+});
+
+// New function to download recording content
+async function downloadRecordingContent(accountId, recordingId, accessToken) {
+    try {
+        // Step 1: Get the recording content token
         const tokenResponse = await axios.get(`https://api.goto.com/recording/v1/recordings/${recordingId}/content`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
@@ -346,26 +432,25 @@ app.get('/recording/:accountId/:id', async (req, res) => {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
             },
-            responseType: 'arraybuffer' // Important for binary data like audio/video
+            responseType: 'arraybuffer' // Important for binary data
         });
 
-        // Store the recording URL in data.json
-        const recordings = readData();
-        if (recordings[accountId] && recordings[accountId][recordingId]) {
-            recordings[accountId][recordingId].content_url = `https://api.goto.com/recording/v1/recordings/${recordingId}/content/${token}`;
-            writeData(recordings);
+        const recordingFilePath = `/recordings/${recordingId}.mp3`; // Store relative path
+        fs.writeFileSync(`public${recordingFilePath}`, recordingContentResponse.data);
+
+        // Update data.json with the local file path and downloaded flag
+        const allData = readData();
+        if (allData.recordings[accountId] && allData.recordings[accountId][recordingId]) {
+            allData.recordings[accountId][recordingId].content_url = recordingFilePath; // Store local file path
+            allData.recordings[accountId][recordingId].local_file_path = recordingFilePath; // Add local file path
+            allData.recordings[accountId][recordingId].recording_downloaded = true; // Add flag
+            writeData(allData);
         }
-
-        // Set appropriate headers for the content type
-        logApiCall(`/recording/${accountId}/${recordingId}`, 'GET', { message: 'Recording content fetched successfully', recordingId: recordingId });
-        res.setHeader('Content-Type', recordingContentResponse.headers['content-type']);
-        res.send(recordingContentResponse.data);
-
+        console.log(`Recording ${recordingId} downloaded and saved.`);
     } catch (error) {
-        console.error(`Error fetching recording content for ${recordingId}:`, error.response ? error.response.data : error.message);
-        res.status(500).json({ message: `Failed to fetch recording content for ${recordingId}.` });
+        console.error(`Error downloading recording content for ${recordingId}:`, error.response ? error.response.data : error.message);
     }
-});
+}
 
 // Route to fetch a specific transcript content
 app.get('/transcript/:accountId/:id', async (req, res) => {

@@ -26,7 +26,6 @@
                                 <th>Recording ID</th>
                                 <th>Transcription Enabled</th>
                                 <th>Start Timestamp</th>
-                                <th>Transcript Content</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -42,10 +41,14 @@
                                     <td><%= recording.recording_id %></td>
                                     <td><%= recording.transcription_enabled ? 'Yes' : 'No' %></td>
                                     <td><%= recording.start_timestamp %></td>
-                                    <td><%= recording.transcript_content %></td>
                                     <td class="recordings-table-actions">
                                         <% if (!recording.content_url) { %>
                                         <button onclick="fetchRecordingContent('<%= accountId %>', '<%= recording.recording_id %>')">Fetch Recording Content</button>
+                                        <% } else if (recording.content_url) { %>
+                                            <audio controls>
+                                                <source src="<%= recording.content_url %>" type="audio/mpeg">
+                                                Your browser does not support the audio element.
+                                            </audio>
                                         <% } else { %>
                                             <a href="<%= recording.content_url %>" target="_blank">Listen Recording</a>
                                         <% } %>
