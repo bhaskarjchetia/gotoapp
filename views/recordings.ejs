@@ -67,11 +67,16 @@
                     <a href="/dashboard"><button>Back to Dashboard</button></a>
                     <button onclick="fetchRecordings('<%= accountId %>')">Fetch Recordings</button>
                 </div>
+                <div id="loader" style="display: none; margin-top: 20px;">
+                    Loading recordings... <img src="/images/spinner.gif" alt="Loading" style="width: 20px; height: 20px;">
+                </div>
             </section>
         </main>
     </div>
     <script>
         async function fetchRecordings(accountId) {
+            const loader = document.getElementById('loader');
+            loader.style.display = 'block'; // Show loader
             try {
                 const response = await fetch(`/fetch-recordings/${accountId}`);
                 if (response.ok) {
@@ -84,6 +89,8 @@
             } catch (error) {
                 console.error('Error fetching recordings:', error);
                 alert('An error occurred while fetching recordings.');
+            } finally {
+                loader.style.display = 'none'; // Hide loader
             }
         }
 
