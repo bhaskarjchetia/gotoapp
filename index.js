@@ -448,6 +448,43 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
     }
 });
 
+// New endpoint to trigger download of all pending recordings for an account
+app.post('/download-all-pending-recordings/:accountId', async (req, res) => {
+    const { accountId } = req.params;
+    const accessToken = req.session.accessToken; // Assuming accessToken is stored in session
+
+    if (!accessToken) {
+        return res.status(401).json({ message: 'Unauthorized: No access token found.' });
+    }
+
+    try {
+        const allData = readData();
+        const accountRecordings = allData.recordings[accountId] || [];
+        const pendingRecordings = accountRecordings.filter(rec => !rec.recording_downloaded);
+
+        if (pendingRecordings.length === 0) {
+            return res.status(200).json({ message: 'No pending recordings to download for this account.' });
+        }
+
+        // Initiate downloads for all pending recordings in parallel
+        const downloadPromises = pendingRecordings.map(async (recording) => {
+            try {
+                await downloadRecordingContent(accountId, recording.recording_id, accessToken);
+                console.log(`Successfully initiated download for ${recording.recording_id}`);
+            } catch (error) {
+                console.error(`Failed to download ${recording.recording_id}:`, error.response ? error.response.data : error.message);
+            }
+        });
+
+        await Promise.all(downloadPromises);
+
+        res.status(200).json({ message: `Initiated download for ${pendingRecordings.length} pending recordings.` });
+    } catch (error) {
+        console.error(`Error downloading all pending recordings for account ${accountId}:`, error.response ? error.response.data : error.message);
+        res.status(500).json({ message: `Failed to download all pending recordings for account ${accountId}.` });
+    }
+});
+
 // New function to download recording content
 async function downloadRecordingContent(accountId, recordingId, accessToken) {
     try {
