@@ -253,7 +253,17 @@ app.get('/fetch-recordings/:accountId', async (req, res) => {
     try {
         let allCallEvents = [];
         let pageMarker = req.query.pageMarker || null;
-        let latestCallCreated = account.latest_callCreated_timestamp || null;
+        
+        // Calculate default startTime (3 months ago) and endTime (current time)
+        const now = new Date();
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(now.getMonth() - 3);
+
+        const defaultStartTime = threeMonthsAgo.toISOString().slice(0, -5) + 'Z';
+        const defaultEndTime = now.toISOString().slice(0, -5) + 'Z';
+
+        let startTime = req.query.startTime || account.latest_callCreated_timestamp || defaultStartTime;
+        let endTime = req.query.endTime || defaultEndTime;
 
         do {
             let apiUrl = `https://api.goto.com/call-events-report/v1/report-summaries?accountKey=${accountId}`;
@@ -262,8 +272,8 @@ app.get('/fetch-recordings/:accountId', async (req, res) => {
             if (req.query.phoneNumberId) apiUrl += `&phoneNumberId=${req.query.phoneNumberId}`;
             if (req.query.lineId) apiUrl += `&lineId=${req.query.lineId}`;
             if (req.query.virtualParticipantId) apiUrl += `&virtualParticipantId=${req.query.virtualParticipantId}`;
-            if (latestCallCreated) apiUrl += `&startTime=${latestCallCreated}`;
-            if (req.query.endTime) apiUrl += `&endTime=${req.query.endTime}`;
+            apiUrl += `&startTime=${startTime}`;
+            apiUrl += `&endTime=${endTime}`;
             if (req.query.conversationScope) apiUrl += `&conversationScope=${req.query.conversationScope}`;
             if (req.query.conversationCallerOutcome) apiUrl += `&conversationCallerOutcome=${req.query.conversationCallerOutcome}`;
             apiUrl += `&pageSize=${req.query.pageSize || 100}`;

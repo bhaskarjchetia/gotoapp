@@ -4,12 +4,17 @@ const path = require('path');
 const DATA_FILE = path.join(__dirname, '..', 'data.json');
 
 function readData() {
+    if (!fs.existsSync(DATA_FILE)) {
+        // If file doesn't exist, create it with an empty JSON object
+        fs.writeFileSync(DATA_FILE, JSON.stringify({ accounts: [], recordings: {} }, null, 2), 'utf8');
+        return { accounts: [], recordings: {} };
+    }
     try {
         const data = fs.readFileSync(DATA_FILE, 'utf8');
         return JSON.parse(data);
     } catch (error) {
-        console.error('Error reading data file:', error);
-        return { accounts: [], recordings: [], transcriptions: [] };
+        console.error('Error reading data file:', error.message);
+        return { accounts: [], recordings: {} }; // Return default structure if file is invalid
     }
 }
 
