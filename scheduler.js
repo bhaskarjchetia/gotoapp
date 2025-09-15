@@ -2,6 +2,8 @@ const cron = require('node-cron');
 const axios = require('axios');
 const { readData, writeData } = require('./utils/dataHandler');
 const { logApiCall } = require('./utils/logHandler');
+const { ensureDirectoryExists } = require('./utils/fileUtils');
+const path = require('path');
 
 let isProcessing = false; // Flag to track if a scheduler run is in progress
 
@@ -116,7 +118,9 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
         });
 
         const recordingFilePath = `/storage/recordings/${recordingId}.mp3`; // Store relative path
-        require('fs').writeFileSync(`public${recordingFilePath}`, recordingContentResponse.data);
+        const fullRecordingPath = path.join(__dirname, '..', 'public', recordingFilePath);
+        ensureDirectoryExists(path.dirname(fullRecordingPath));
+        require('fs').writeFileSync(fullRecordingPath, recordingContentResponse.data);
 
         // Update data.json with the local file path and downloaded flag
         const allData = readData();
