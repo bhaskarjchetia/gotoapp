@@ -1,5 +1,8 @@
-const { readData, writeData } = require('./utils/dataHandler');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const { readData, writeData } = require('./utils/dataHandler');
+const { logApiCall } = require('./utils/logHandler');
 require('dotenv').config();
 
 // Function to refresh access token (copied from index.js for self-containment)
@@ -9,23 +12,34 @@ async function refreshAccessToken(account) {
     const refreshToken = account.refreshToken;
 
     try {
-        const response = await axios.post('https://api.goto.com/oauth/v2/token', new URLSearchParams({
-            grant_type: 'refresh_token',
-            client_id: clientId,
-            client_secret: clientSecret,
-            refresh_token: refreshToken
-        }), {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
+        const tokenResponse = await axios.post('https://authentication.logmeininc.com/oauth/token',
+            `grant_type=refresh_token&refresh_token=${refreshToken}`,
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+                }
             }
-        });
-        account.accessToken = response.data.access_token;
-        account.refreshToken = response.data.refresh_token; // Refresh token might also be updated
-        writeData(readData()); // Persist updated tokens
-        return account.accessToken;
+        );
+
+        const newAccessToken = tokenResponse.data.access_token;
+        const newExpiresIn = tokenResponse.data.expires_in;
+        const newExpiresAt = Date.now() / 1000 + newExpiresIn;
+
+        const data = readData();
+        const accountIndex = data.accounts.findIndex(acc => acc.id === account.id);
+        if (accountIndex !== -1) {
+            data.accounts[accountIndex].accessToken = newAccessToken;
+            data.accounts[accountIndex].expiresIn = newExpiresIn;
+            data.accounts[accountIndex].expiresAt = newExpiresAt;
+            writeData(data);
+        }
+        logApiCall('/refreshAccessToken', 'POST', { message: 'Access token refreshed successfully', accountId: account.id });
+        return newAccessToken;
     } catch (error) {
         console.error('Error refreshing access token:', error.response ? error.response.data : error.message);
-        return null;
+        logApiCall('/refreshAccessToken', 'POST', { message: 'Access token refresh failed', accountId: account.id, error: error.message });
+        throw new Error('Failed to refresh access token');
     }
 }
 
@@ -111,10 +125,14 @@ async function testDownloadFirstFiveRecordings() {
 
     for (const account of accounts) {
         console.log(`Processing account: ${account.id}`);
-        const accessToken = await refreshAccessToken(account);
-        if (!accessToken) {
-            console.error(`Failed to get access token for account ${account.id}. Skipping downloads for this account.`);
-            continue;
+        let accessToken = account.accessToken;
+        // Check if the current token is expired or about to expire (e.g., within 5 minutes)
+        if (!account.expiresAt || (account.expiresAt - Date.now() / 1000 < 300)) { // 300 seconds = 5 minutes
+            accessToken = await refreshAccessToken(account);
+            if (!accessToken) {
+                console.error(`Failed to get access token for account ${account.id}. Skipping downloads for this account.`);
+                continue;
+            }
         }
 
         let accountRecordings = data.recordings[account.id] || {};
