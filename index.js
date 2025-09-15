@@ -23,7 +23,7 @@ ensureDirectoryExists(path.dirname(storageDir));
 initializeUsersFile();
 
 // Ensure the recordings directory exists
-const recordingsDir = path.join(__dirname, 'public', 'storage', 'recordings');
+const recordingsDir = path.join(__dirname, 'recordings');
 ensureDirectoryExists(path.dirname(recordingsDir));
 
 
@@ -419,7 +419,7 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
             responseType: 'arraybuffer' // Important for binary data
         });
 
-        const fullRecordingPath = path.join(__dirname, '..', 'public', 'storage', 'recordings', recordingId + '.mp3');
+        const fullRecordingPath = path.join(__dirname, '..', 'recordings', recordingId + '.mp3');
         ensureDirectoryExists(path.dirname(fullRecordingPath));
         fs.writeFileSync(fullRecordingPath, recordingContentResponse.data);
 
@@ -428,7 +428,7 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
         if (allData.recordings[accountId]) {
             const recordingIndex = allData.recordings[accountId].findIndex(r => r.recording_id === recordingId);
             if (recordingIndex !== -1) {
-                allData.recordings[accountId][recordingIndex].content_url = `/storage/recordings/${recordingId}.mp3`; // Store relative URL
+                allData.recordings[accountId][recordingIndex].content_url = `/recordings/${recordingId}.mp3`; // Store relative URL
                 allData.recordings[accountId][recordingIndex].recording_downloaded = true; // Add flag
                 writeData(allData);
             }

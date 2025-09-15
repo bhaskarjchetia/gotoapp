@@ -118,7 +118,7 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
             responseType: 'arraybuffer' // Important for binary data
         });
 
-        const fullRecordingPath = path.join(__dirname, '..', 'public', 'storage', 'recordings', recordingId + '.mp3');
+        const fullRecordingPath = path.join(__dirname, '..', 'recordings', recordingId + '.mp3');
 
         ensureDirectoryExists(path.dirname(fullRecordingPath));
         fs.writeFileSync(fullRecordingPath, recordingContentResponse.data);
@@ -128,7 +128,7 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
         if (allData.recordings[accountId]) {
             const recordingIndex = allData.recordings[accountId].findIndex(r => r.recording_id === recordingId);
             if (recordingIndex !== -1) {
-                allData.recordings[accountId][recordingIndex].content_url = `/storage/recordings/${recordingId}.mp3`;
+                allData.recordings[accountId][recordingIndex].content_url = `/recordings/${recordingId}.mp3`;
                 allData.recordings[accountId][recordingIndex].recording_downloaded = true;
                 writeData(allData);
             }
