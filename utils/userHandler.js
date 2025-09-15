@@ -8,12 +8,11 @@ const USERS_FILE = path.join(__dirname, '..', 'public', 'storage', 'user.json');
 function initializeUsersFile() {
     ensureDirectoryExists(path.dirname(USERS_FILE));
     if (!fs.existsSync(USERS_FILE)) {
-        fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2), 'utf8');
+        fs.writeFileSync(USERS_FILE, JSON.stringify({ users: [] }, null, 2), 'utf8');
     }
 }
 
 const readUsers = () => {
-    initializeUsersFile();
     const data = fs.readFileSync(USERS_FILE, 'utf8');
     return JSON.parse(data);
 };
