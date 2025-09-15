@@ -12,8 +12,6 @@ function initializeUsersFile() {
     }
 }
 
-initializeUsersFile();
-
 const readUsers = () => {
     initializeUsersFile();
     const data = fs.readFileSync(USERS_FILE, 'utf8');

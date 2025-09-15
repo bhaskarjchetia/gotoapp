@@ -17,11 +17,14 @@ const path = require('path');
 
 // Ensure the public/storage directory exists on application startup
 const storageDir = path.join(__dirname, 'public', 'storage');
-ensureDirectoryExists(storageDir);
+ensureDirectoryExists(path.dirname(storageDir));
+
+// Initialize user data file
+initializeUsersFile();
 
 // Ensure the recordings directory exists
 const recordingsDir = path.join(__dirname, 'public', 'storage', 'recordings');
-ensureDirectoryExists(recordingsDir);
+ensureDirectoryExists(path.dirname(recordingsDir));
 
 
 // Set EJS as the view engine

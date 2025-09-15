@@ -1,10 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const ensureDirectoryExists = (filePath) => {
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+const ensureDirectoryExists = (directoryPath) => {
+    if (!fs.existsSync(directoryPath)) {
+        fs.mkdirSync(directoryPath, { recursive: true });
     }
 };
 
