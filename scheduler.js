@@ -92,7 +92,7 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
             responseType: 'arraybuffer' // Important for binary data
         });
 
-        const recordingFilePath = `/recordings/${recordingId}.mp3`; // Store relative path
+        const recordingFilePath = `/storage/recordings/${recordingId}.mp3`; // Store relative path
         require('fs').writeFileSync(`public${recordingFilePath}`, recordingContentResponse.data);
 
         // Update data.json with the local file path and downloaded flag

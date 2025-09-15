@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+require('dotenv').config();
 
 const { readData, writeData, clearData, addAccount, updateAccount, deleteAccount, findAccountById, addRecordings, addTranscriptions } = require('./utils/dataHandler');
 
@@ -7,18 +8,21 @@ const { startRecordingScheduler, triggerSchedulerRun } = require('./scheduler');
 const fs = require('fs');
 const { readUsers, writeUsers, addUser, findUser, updateUser, deleteUser } = require('./utils/userHandler');
 const { readLogs, writeLogs, clearLogs, logApiCall } = require('./utils/logHandler');
-require('dotenv').config();
+const { ensureDirectoryExists } = require('./utils/fileUtils');
 
 const app = express();
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const path = require('path');
 
+// Ensure the public/storage directory exists on application startup
+const storageDir = path.join(__dirname, 'public', 'storage');
+ensureDirectoryExists(storageDir);
+
 // Ensure the recordings directory exists
 const recordingsDir = path.join(__dirname, 'public', 'storage', 'recordings');
-if (!fs.existsSync(recordingsDir)) {
-    fs.mkdirSync(recordingsDir, { recursive: true });
-}
+ensureDirectoryExists(recordingsDir);
+
 
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
@@ -412,7 +416,7 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
             responseType: 'arraybuffer' // Important for binary data
         });
 
-        const recordingFilePath = `/recordings/${recordingId}.mp3`; // Store relative path
+        const recordingFilePath = `/storage/recordings/${recordingId}.mp3`; // Store relative path
         fs.writeFileSync(`public${recordingFilePath}`, recordingContentResponse.data);
 
         // Update data.json with the local file path and downloaded flag

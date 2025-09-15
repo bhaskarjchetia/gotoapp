@@ -1,9 +1,11 @@
 const fs = require('fs');
 const path = require('path');
+const { ensureDirectoryExists } = require('./fileUtils');
 
 const DATA_FILE = path.join(__dirname, '..', 'public', 'storage', 'data.json');
 
 function readData() {
+    ensureDirectoryExists(path.dirname(DATA_FILE));
     if (!fs.existsSync(DATA_FILE)) {
         // If file doesn't exist, create it with an empty JSON object
         fs.writeFileSync(DATA_FILE, JSON.stringify({ accounts: [], recordings: {} }, null, 2), 'utf8');
@@ -19,6 +21,7 @@ function readData() {
 }
 
 function writeData(data) {
+    ensureDirectoryExists(path.dirname(DATA_FILE));
     try {
         fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 4), 'utf8');
     } catch (error) {

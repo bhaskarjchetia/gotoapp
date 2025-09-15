@@ -1,14 +1,16 @@
 const fs = require('fs');
 const path = require('path');
+const { ensureDirectoryExists } = require('./fileUtils');
 
 const USERS_FILE = path.join(__dirname, '..', 'public', 'storage', 'user.json');
 
 // Ensure the user.json file exists
-const initializeUsersFile = () => {
+function initializeUsersFile() {
+    ensureDirectoryExists(path.dirname(USERS_FILE));
     if (!fs.existsSync(USERS_FILE)) {
-        fs.writeFileSync(USERS_FILE, JSON.stringify({ users: [] }, null, 2));
+        fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2), 'utf8');
     }
-};
+}
 
 initializeUsersFile();
 
@@ -19,6 +21,7 @@ const readUsers = () => {
 };
 
 const writeUsers = (users) => {
+    ensureDirectoryExists(path.dirname(USERS_FILE));
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
 };
 

@@ -1,9 +1,5 @@
-# Logs
-logs.json
-
-# Data
-data.json
-user.json
+# Data storage
+public/storage/
 
 # Dependencies
 node_modules/

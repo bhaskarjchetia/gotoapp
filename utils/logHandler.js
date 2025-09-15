@@ -1,9 +1,11 @@
 const fs = require('fs');
 const path = require('path');
+const { ensureDirectoryExists } = require('./fileUtils');
 
 const LOG_FILE = path.join(__dirname, '..', 'public', 'storage', 'logs.json');
 
 function readLogs() {
+    ensureDirectoryExists(path.dirname(LOG_FILE));
     try {
         if (fs.existsSync(LOG_FILE)) {
             const data = fs.readFileSync(LOG_FILE, 'utf8');
@@ -18,6 +20,7 @@ function readLogs() {
 }
 
 function writeLogs(logs) {
+    ensureDirectoryExists(path.dirname(LOG_FILE));
     try {
         fs.writeFileSync(LOG_FILE, JSON.stringify(logs, null, 2), 'utf8');
     } catch (error) {
@@ -26,6 +29,7 @@ function writeLogs(logs) {
 }
 
 function clearLogs() {
+    ensureDirectoryExists(path.dirname(LOG_FILE));
     try {
         fs.writeFileSync(LOG_FILE, JSON.stringify([], null, 2), 'utf8');
         console.log('logs.json cleared.');
