@@ -419,15 +419,17 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
             responseType: 'arraybuffer' // Important for binary data
         });
 
-        const recordingFilePath = `/storage/recordings/${recordingId}.mp3`; // Store relative path
-        fs.writeFileSync(`public${recordingFilePath}`, recordingContentResponse.data);
+        const recordingFilePath = `/storage/recordings/${recordingId}.mp3`;
+        const fullRecordingPath = path.join(__dirname, '..', 'public', recordingFilePath);
+        ensureDirectoryExists(path.dirname(fullRecordingPath));
+        fs.writeFileSync(fullRecordingPath, recordingContentResponse.data);
 
         // Update data.json with the local file path and downloaded flag
         const allData = readData();
         if (allData.recordings[accountId]) {
             const recordingIndex = allData.recordings[accountId].findIndex(r => r.recording_id === recordingId);
             if (recordingIndex !== -1) {
-                allData.recordings[accountId][recordingIndex].content_url = recordingFilePath; // Store local file path
+                allData.recordings[accountId][recordingIndex].content_url = fullRecordingPath; // Store local file path
                 allData.recordings[accountId][recordingIndex].recording_downloaded = true; // Add flag
                 writeData(allData);
             }

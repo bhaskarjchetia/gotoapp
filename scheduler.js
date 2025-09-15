@@ -4,6 +4,7 @@ const { readData, writeData } = require('./utils/dataHandler');
 const { logApiCall } = require('./utils/logHandler');
 const { ensureDirectoryExists } = require('./utils/fileUtils');
 const path = require('path');
+const fs = require('fs');
 
 let isProcessing = false; // Flag to track if a scheduler run is in progress
 
@@ -120,14 +121,14 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
         const recordingFilePath = `/storage/recordings/${recordingId}.mp3`; // Store relative path
         const fullRecordingPath = path.join(__dirname, '..', 'public', recordingFilePath);
         ensureDirectoryExists(path.dirname(fullRecordingPath));
-        require('fs').writeFileSync(fullRecordingPath, recordingContentResponse.data);
+        fs.writeFileSync(fullRecordingPath, recordingContentResponse.data);
 
         // Update data.json with the local file path and downloaded flag
         const allData = readData();
         if (allData.recordings[accountId]) {
             const recordingIndex = allData.recordings[accountId].findIndex(r => r.recording_id === recordingId);
             if (recordingIndex !== -1) {
-                allData.recordings[accountId][recordingIndex].content_url = recordingFilePath;
+                allData.recordings[accountId][recordingIndex].content_url = fullRecordingPath;
                 allData.recordings[accountId][recordingIndex].recording_downloaded = true;
                 writeData(allData);
             }
