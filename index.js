@@ -419,8 +419,7 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
             responseType: 'arraybuffer' // Important for binary data
         });
 
-        const recordingFilePath = `/storage/recordings/${recordingId}.mp3`;
-        const fullRecordingPath = path.join(__dirname, '..', 'public', recordingFilePath);
+        const fullRecordingPath = path.join(__dirname, '..', 'public', 'storage', 'recordings', recordingId + '.mp3');
         ensureDirectoryExists(path.dirname(fullRecordingPath));
         fs.writeFileSync(fullRecordingPath, recordingContentResponse.data);
 

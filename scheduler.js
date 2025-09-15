@@ -118,8 +118,8 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
             responseType: 'arraybuffer' // Important for binary data
         });
 
-        const recordingFilePath = `/storage/recordings/${recordingId}.mp3`; // Store relative path
-        const fullRecordingPath = path.join(__dirname, '..', 'public', recordingFilePath);
+        const fullRecordingPath = path.join(__dirname, '..', 'public', 'storage', 'recordings', recordingId + '.mp3');
+
         ensureDirectoryExists(path.dirname(fullRecordingPath));
         fs.writeFileSync(fullRecordingPath, recordingContentResponse.data);
 
