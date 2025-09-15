@@ -128,7 +128,7 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
         if (allData.recordings[accountId]) {
             const recordingIndex = allData.recordings[accountId].findIndex(r => r.recording_id === recordingId);
             if (recordingIndex !== -1) {
-                allData.recordings[accountId][recordingIndex].content_url = fullRecordingPath;
+                allData.recordings[accountId][recordingIndex].content_url = `/storage/recordings/${recordingId}.mp3`;
                 allData.recordings[accountId][recordingIndex].recording_downloaded = true;
                 writeData(allData);
             }

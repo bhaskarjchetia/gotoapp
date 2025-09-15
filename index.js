@@ -428,7 +428,7 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
         if (allData.recordings[accountId]) {
             const recordingIndex = allData.recordings[accountId].findIndex(r => r.recording_id === recordingId);
             if (recordingIndex !== -1) {
-                allData.recordings[accountId][recordingIndex].content_url = fullRecordingPath; // Store local file path
+                allData.recordings[accountId][recordingIndex].content_url = `/storage/recordings/${recordingId}.mp3`; // Store relative URL
                 allData.recordings[accountId][recordingIndex].recording_downloaded = true; // Add flag
                 writeData(allData);
             }
