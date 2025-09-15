@@ -1,5 +1,6 @@
 # Data storage
 public/storage/
+public/recordings/
 
 # Dependencies
 node_modules/
