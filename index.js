@@ -6,7 +6,7 @@ const { readData, writeData, clearData, addAccount, updateAccount, deleteAccount
 
 const { startRecordingScheduler, triggerSchedulerRun } = require('./scheduler'); // Import the scheduler
 const fs = require('fs');
-const { readUsers, writeUsers, addUser, findUser, updateUser, deleteUser } = require('./utils/userHandler');
+const { readUsers, writeUsers, findUserByUsername, addUser, initializeUsersFile } = require('./utils/userHandler');
 const { readLogs, writeLogs, clearLogs, logApiCall } = require('./utils/logHandler');
 const { ensureDirectoryExists } = require('./utils/fileUtils');
 
