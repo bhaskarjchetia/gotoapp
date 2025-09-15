@@ -140,9 +140,9 @@ async function downloadRecordingContent(accountId, recordingId, accessToken) {
 
 // Main scheduler function
 exports.startRecordingScheduler = function() {
-    // Schedule to run every hour
-    cron.schedule('0 * * * *', runSchedulerLogic);
-    console.log('Recording download scheduler started. Will run hourly.');
+    // Schedule to run every 6 hours
+    cron.schedule('0 */6 * * *', runSchedulerLogic);
+    console.log('Recording download scheduler started. Will run every 6 hours.');
 };
 
 exports.triggerSchedulerRun = function() {
