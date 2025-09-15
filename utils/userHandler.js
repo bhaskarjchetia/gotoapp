@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const USERS_FILE = path.join(__dirname, '../user.json');
+const USERS_FILE = path.join(__dirname, '..', 'public', 'storage', 'user.json');
 
 // Ensure the user.json file exists
 const initializeUsersFile = () => {

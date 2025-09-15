@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DATA_FILE = path.join(__dirname, '..', 'data.json');
+const DATA_FILE = path.join(__dirname, '..', 'public', 'storage', 'data.json');
 
 function readData() {
     if (!fs.existsSync(DATA_FILE)) {
@@ -52,9 +52,12 @@ function findAccountById(accountId) {
     return data.accounts.find(acc => acc.id === accountId);
 }
 
-function addRecordings(newRecordings) {
+function addRecordings(accountId, newRecordings) {
     const data = readData();
-    data.recordings.push(...newRecordings);
+    if (!data.recordings[accountId]) {
+        data.recordings[accountId] = [];
+    }
+    data.recordings[accountId].push(...newRecordings);
     writeData(data);
 }
 
@@ -62,6 +65,15 @@ function addTranscriptions(newTranscriptions) {
     const data = readData();
     data.transcriptions.push(...newTranscriptions);
     writeData(data);
+}
+
+function clearData() {
+    try {
+        fs.writeFileSync(DATA_FILE, JSON.stringify({ accounts: [], recordings: {} }, null, 2), 'utf8');
+        console.log('data.json cleared successfully.');
+    } catch (error) {
+        console.error('Error clearing data file:', error.message);
+    }
 }
 
 module.exports = {
@@ -72,5 +84,6 @@ module.exports = {
     deleteAccount,
     findAccountById,
     addRecordings,
-    addTranscriptions
+    addTranscriptions,
+    clearData
 };

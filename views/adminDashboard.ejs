@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
+    <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/style.css">
     <style>
         pre {
@@ -89,6 +90,9 @@
             <div class="button-group">
                 <form action="/admin/clear-logs" method="POST">
                     <button type="submit" class="btn btn-secondary">Clear Logs</button>
+                </form>
+                <form action="/admin/clear-data" method="POST">
+                    <button type="submit" class="btn btn-danger">Clear Data</button>
                 </form>
                 <a href="/admin/logout" class="btn btn-primary">Logout</a>
             </div>

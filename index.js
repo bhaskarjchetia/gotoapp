@@ -1,10 +1,12 @@
 const express = require('express');
-const fs = require('fs');
-const { readData, writeData, deleteAccount } = require('./utils/dataHandler');
-const { clearLogs } = require('./utils/logHandler');
-const { readUsers, writeUsers, addUser, findUser, updateUser, deleteUser } = require('./utils/userHandler');
 const axios = require('axios');
-const { readLogs, writeLogs } = require('./utils/logHandler');
+
+const { readData, writeData, clearData, addAccount, updateAccount, deleteAccount, findAccountById, addRecordings, addTranscriptions } = require('./utils/dataHandler');
+
+const { startRecordingScheduler, triggerSchedulerRun } = require('./scheduler'); // Import the scheduler
+const fs = require('fs');
+const { readUsers, writeUsers, addUser, findUser, updateUser, deleteUser } = require('./utils/userHandler');
+const { readLogs, writeLogs, clearLogs, logApiCall } = require('./utils/logHandler');
 require('dotenv').config();
 
 const app = express();
@@ -13,7 +15,7 @@ const session = require('express-session');
 const path = require('path');
 
 // Ensure the recordings directory exists
-const recordingsDir = path.join(__dirname, 'public', 'recordings');
+const recordingsDir = path.join(__dirname, 'public', 'storage', 'recordings');
 if (!fs.existsSync(recordingsDir)) {
     fs.mkdirSync(recordingsDir, { recursive: true });
 }
@@ -37,17 +39,7 @@ app.use(session({
 }));
 const PORT = process.env.PORT || 3000;
 
-// Function to log API calls
-function logApiCall(endpoint, method, responseData) {
-    const logs = readLogs();
-    logs.push({
-        timestamp: new Date().toISOString(),
-        endpoint: endpoint,
-        method: method,
-        responseData: responseData
-    });
-    writeLogs(logs);
-}
+
 
 // Function to refresh access token
 async function refreshAccessToken(account) {
@@ -350,13 +342,8 @@ app.get('/fetch-recordings/:accountId', async (req, res) => {
         });
         writeData(data);
 
-        // After fetching all recording IDs, initiate downloads for new recordings
-        // if (accessToken) {
-        //     const newRecordingsToDownload = data.recordings[accountId].filter(rec => !rec.recording_downloaded);
-        //     for (const recording of newRecordingsToDownload) {
-        //         downloadRecordingContent(accountId, recording.recording_id, accessToken);
-        //     }
-        // }
+        // Trigger the scheduler immediately after new recordings are added
+        triggerSchedulerRun();
 
         logApiCall(`/fetch-recordings/${accountId}`, 'GET', { message: 'Recordings fetched and stored successfully.', count: finalCallEvents.length });
         res.status(200).json({ message: 'Recordings fetched and stored successfully.' });
@@ -448,90 +435,8 @@ app.get('/recording/:accountId/:recordingId', async (req, res) => {
     }
 });
 
-// New endpoint to trigger download of all pending recordings for an account
-app.post('/download-all-pending-recordings/:accountId', async (req, res) => {
-    const { accountId } = req.params;
-
-    const data = readData();
-    const account = data.accounts.find(acc => acc.id === accountId);
-    if (!account) {
-        return res.status(404).json({ message: 'Account not found.' });
-    }
-
-    try {
-        const accessToken = await refreshAccessToken(account);
-        if (!accessToken) {
-            return res.status(401).json({ message: 'Failed to refresh access token.' });
-        }
-        
-        const allData = readData();
-        const accountRecordings = allData.recordings[accountId] || [];
-        const pendingRecordings = accountRecordings.filter(rec => !rec.recording_downloaded);
-
-        if (pendingRecordings.length === 0) {
-            return res.status(200).json({ message: 'No pending recordings to download for this account.' });
-        }
-
-        // Initiate downloads for all pending recordings in parallel
-        const downloadPromises = pendingRecordings.map(async (recording) => {
-            try {
-                await downloadRecordingContent(accountId, recording.recording_id, accessToken);
-                console.log(`Successfully initiated download for ${recording.recording_id}`);
-            } catch (error) {
-                console.error(`Failed to download ${recording.recording_id}:`, error.response ? error.response.data : error.message);
-            }
-        });
-
-        await Promise.all(downloadPromises);
-
-        res.status(200).json({ message: `Initiated download for ${pendingRecordings.length} pending recordings.` });
-    } catch (error) {
-        console.error(`Error downloading all pending recordings for account ${accountId}:`, error.response ? error.response.data : error.message);
-        res.status(500).json({ message: `Failed to download all pending recordings for account ${accountId}.` });
-    }
-});
-
-// New function to download recording content
-async function downloadRecordingContent(accountId, recordingId, accessToken) {
-    try {
-        // Step 1: Get the recording content token
-        const tokenResponse = await axios.get(`https://api.goto.com/recording/v1/recordings/${recordingId}/content`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
-
-        const token = tokenResponse.data.token.token;
-        console.log(`Recording content token for ${recordingId}:`, token);
-
-        // Step 2: Fetch the recording content using the token
-        const recordingContentResponse = await axios.get(`https://api.goto.com/recording/v1/recordings/${recordingId}/content/${token}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            },
-            responseType: 'arraybuffer' // Important for binary data
-        });
-        console.log(`Recording content response status for ${recordingId}:`, recordingContentResponse.status);
-        console.log(`Recording content data length for ${recordingId}:`, recordingContentResponse.data ? recordingContentResponse.data.length : 'No data');
-
-        const recordingFilePath = `/recordings/${recordingId}.mp3`; // Store relative path
-        fs.writeFileSync(`public${recordingFilePath}`, recordingContentResponse.data);
-
-        // Update data.json with the local file path and downloaded flag
-        const allData = readData();
-        if (allData.recordings[accountId]) {
-            const recordingIndex = allData.recordings[accountId].findIndex(r => r.recording_id === recordingId);
-            if (recordingIndex !== -1) {
-                allData.recordings[accountId][recordingIndex].content_url = recordingFilePath; // Store local file path
-                allData.recordings[accountId][recordingIndex].recording_downloaded = true; // Add flag
-                writeData(allData);
-            }
-        }
-        console.log(`Recording ${recordingId} downloaded and saved.`);
-    } catch (error) {
-        console.error(`Error downloading recording content for ${recordingId}:`, error.response ? error.response.data : error.message);
-    }
-}
+// Start the recording scheduler
+startRecordingScheduler();
 
 // Route to fetch a specific transcript content
 app.get('/transcript/:accountId/:id', async (req, res) => {
@@ -645,6 +550,11 @@ function isAuthenticatedAdmin(req, res, next) {
 // Admin Routes
 app.post('/admin/clear-logs', (req, res) => {
     clearLogs();
+    res.redirect('/admin/dashboard');
+});
+
+app.post('/admin/clear-data', isAuthenticatedAdmin, (req, res) => {
+    clearData();
     res.redirect('/admin/dashboard');
 });
 

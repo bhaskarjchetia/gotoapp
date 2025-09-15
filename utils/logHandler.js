@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const LOG_FILE = path.join(__dirname, '..', 'logs.json');
+const LOG_FILE = path.join(__dirname, '..', 'public', 'storage', 'logs.json');
 
 function readLogs() {
     try {
@@ -34,4 +34,15 @@ function clearLogs() {
     }
 }
 
-module.exports = { readLogs, writeLogs, clearLogs };
+function logApiCall(endpoint, method, responseData) {
+    const logs = readLogs();
+    logs.push({
+        timestamp: new Date().toISOString(),
+        endpoint: endpoint,
+        method: method,
+        responseData: responseData
+    });
+    writeLogs(logs);
+}
+
+module.exports = { readLogs, writeLogs, clearLogs, logApiCall };
